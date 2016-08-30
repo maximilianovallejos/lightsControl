@@ -4,99 +4,56 @@ const bool BT_ENABLED = false; //bluetooth
 const bool LS_ENABLED = false; //light sensor
 const bool COM_ENABLED = true;
 
-const int PIN_LED=9;
-int lightLevel = 0;
-  
+int led = 6;
+int level = 0;
+int button =  31;
+const int MAX_LEVEL = 3;
+
+
+// the setup routine runs once when you press reset:
 void setup() {
-  Serial.begin(9600); //especifica baudrate para la conexion serial
-  pinMode(PIN_LED,OUTPUT);
+
+  pinMode(led, OUTPUT);
+  pinMode(button, INPUT);
+
+  testlights();
+  Serial.begin(9600);
 }
 
-
-void loop() { 
-
-
-  if(LS_ENABLED)
-  {
-  }
-  if(BT_ENABLED)
-  {
-      char btData;
-    btData = readFromBT();
-  }
-  if(COM_ENABLED)
-  {
-    int data = readFromCom();
-    if(data >= 0)
-    {
-      lightLevel = data;
-    }
-  }
-  Serial.print("\n");
-  Serial.print(lightLevel);
-  setLightLevel(lightLevel);
-
- 
-   delay(1000);
-}
-
-int readFromCom()
+void testlights()
 {
-    if(Serial.available() > 0)      // chequeo si hay data
-   {
-
-      int data = Serial.parseInt();        
-      Serial.print("\n com ");
-      Serial.print(data);          //imprimo en consola serial
-      Serial.print("\n");        
-      
-    //  Serial.write("In byte ");
-  //    int inBytes = unitToByte(data);
-//       Serial.write(parseInt(inBytes));
-       
-      return data;
-   }
-   else
-   {
-     return -1;
-   }
-}
-
-char readFromBT()
-{
-  if(Serial.available() > 0)      // chequeo si hay data
-   {
-      char data = Serial.read();        
-      Serial.print("\n bt ");
-      Serial.print(data);          //imprimo en consola serial
-      Serial.print("\n");        
-      return data;
-   }
-   else
-   {
-     return ' ';
-   }
-}
-
-void setLightLevel(int level)
-{
-  if(lightLevel != level)
-  {
-    Serial.write("\n Level");
-    Serial.write(level);
-    Serial.write("\n");
-  //turn on/off  
-   analogWrite(PIN_LED, level);
-   lightLevel = level;
-   
-       
-   
-   
-  }
+  analogWrite(led, 0);  
   
+  analogWrite(led, 255);
+  delay(1000);
 }
 
-int unitToByte(int value)
-{
-  return 25 * value;
+
+void loop() {
+ 
+  bool changed  = false;
+ 
+ Serial.print(digitalRead(button));
+ if(digitalRead(button) == HIGH)
+ {
+   changed = true;
+ 	level++;
+   if(level > MAX_LEVEL)
+   {
+     level = 0;
+   }
+ }
+  
+  if(level == 0)
+  {
+    analogWrite(led, 0);
+  }
+  else
+  {
+    analogWrite(led, (level * 75) + 30);
+  }
+  if(changed)
+  {
+ 	 delay(250);
+  }
 }
