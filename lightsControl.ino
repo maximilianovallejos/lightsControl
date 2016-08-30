@@ -4,6 +4,7 @@ const bool BT_ENABLED = false; //bluetooth
 const bool LS_ENABLED = false; //light sensor
 const bool COM_ENABLED = true;
 
+int ligtSensorPin = 5;
 int lightPin = 6;
 int currentLevel = 0;
 int currentColor = 0;
@@ -98,6 +99,7 @@ void readLightSensor()
 {
   if(!LS_ENABLED || !automaticLevel)
   {
-    return;
+    int sensorData = analogRead(ligtSensorPin) ;
+    targetLevel = map (sensorData, 0,1023, 1, 3) ;
   }
 }
