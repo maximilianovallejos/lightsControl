@@ -4,57 +4,100 @@ const bool BT_ENABLED = false; //bluetooth
 const bool LS_ENABLED = false; //light sensor
 const bool COM_ENABLED = true;
 
-int led = 6;
-int level = 0;
+int lightPin = 6;
+int currentLevel = 0;
+int currentColor = 0;
+int targetLevel = 0;
+int targetColor = 0;
 int button =  31;
 const int MAX_LEVEL = 3;
+bool automaticLevel = false;
 
+int buttonLastPressed = 0;
+const int BUTTON_MIN_TIME = 300;
 
-// the setup routine runs once when you press reset:
 void setup() {
 
-  pinMode(led, OUTPUT);
+  pinMode(lightPin, OUTPUT);
   pinMode(button, INPUT);
 
-  testlights();
   Serial.begin(9600);
+  testlights();
 }
 
 void testlights()
 {
-  analogWrite(led, 0);  
-  
-  analogWrite(led, 255);
-  delay(1000);
+  analogWrite(lightPin, 0);  
+   delay(500);
+  analogWrite(lightPin, 255);
+  delay(500);
 }
 
 
 void loop() 
 {
- 
-  bool changed  = false;
- 
- Serial.print(digitalRead(button));
- if(digitalRead(button) == HIGH)
- {
-   changed = true;
- 	level++;
-   if(level > MAX_LEVEL)
-   {
-     level = 0;
-   }
- }
-  
+  readButton();
+  readBluetooth();
+  readLightSensor();
+
+  bool levelChanged = currentLevel != targetLevel;
+  bool colorChanged = currentColor != targetColor;
+  if(levelChanged)
+  {
+    applyLightLevel(targetLevel);
+  }
+  if(colorChanged)
+  {
+    applyLightcolor(targetColor);
+  }
+}
+
+void applyLightLevel(int level)
+{
   if(level == 0)
   {
-    analogWrite(led, 0);
+    currentLevel = 0;
   }
   else
   {
-    analogWrite(led, (level * 75) + 30);
+    currentLevel = currentLevel * 75 + 30;
   }
-  if(changed)
+  analogWrite(lightPin, currentLevel);
+}
+
+void applyLightcolor(int color)
+{
+  currentColor = color;
+}
+
+void readButton()
+{
+  if(digitalRead(button) == HIGH)
   {
- 	 delay(250);
+    if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
+    {
+      targetLevel = currentLevel + 1;
+      if(targetLevel > MAX_LEVEL)
+      {
+        targetLevel = 0;
+      }
+    }
+    buttonLastPressed = millis();
+  }
+}
+
+void readBluetooth()
+{
+  if(!BT_ENABLED)
+  {
+    return;
+  }
+}
+
+void readLightSensor()
+{
+  if(!LS_ENABLED || !automaticLevel)
+  {
+    return;
   }
 }
