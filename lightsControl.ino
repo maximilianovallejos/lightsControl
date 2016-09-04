@@ -4,8 +4,18 @@ const bool BT_ENABLED = false; //bluetooth
 const bool LS_ENABLED = false; //light sensor
 const bool COM_ENABLED = true;
 
-int ligtSensorPin = 5;
-int lightPin = 6;
+const int LIGHT_SENSOR_PIN = A7;
+const int LIGHT_PIN = 6;
+
+//lightSensor
+unsigned long lastLSensorCheck = 0;
+const int lightSensorCheckTime = 2000;
+
+//button
+unsigned long buttonLastPressed = 0;
+const int BUTTON_MIN_TIME = 300;
+
+
 int currentLevel = 0;
 int currentColor = 0;
 int targetLevel = 0;
@@ -14,12 +24,11 @@ int button =  31;
 const int MAX_LEVEL = 3;
 bool automaticLevel = false;
 
-int buttonLastPressed = 0;
-const int BUTTON_MIN_TIME = 300;
 
-void setup() {
 
-  pinMode(lightPin, OUTPUT);
+void setup() 
+{
+  pinMode(LIGHT_PIN, OUTPUT);
   pinMode(button, INPUT);
 
   Serial.begin(9600);
@@ -28,12 +37,11 @@ void setup() {
 
 void testlights()
 {
-  analogWrite(lightPin, 0);  
+  analogWrite(LIGHT_PIN, 0);  
    delay(500);
-  analogWrite(lightPin, 255);
+  analogWrite(LIGHT_PIN, 255);
   delay(500);
 }
-
 
 void loop() 
 {
@@ -63,7 +71,7 @@ void applyLightLevel(int level)
   {
     currentLevel = currentLevel * 75 + 30;
   }
-  analogWrite(lightPin, currentLevel);
+  analogWrite(LIGHT_PIN, currentLevel);
 }
 
 void applyLightcolor(int color)
@@ -97,9 +105,37 @@ void readBluetooth()
 
 void readLightSensor()
 {
-  if(!LS_ENABLED || !automaticLevel)
+  if(LS_ENABLED && automaticLevel)
   {
-    int sensorData = analogRead(ligtSensorPin) ;
-    targetLevel = map (sensorData, 0,1023, 1, 3) ;
+    if(millis() -lastLSensorCheck > lightSensorCheckTime)
+    {
+      int data =  analogRead(LIGHT_SENSOR_PIN);
+      //Serial.print("Read from light sensor: " + data + " of 1024");
+      Serial.print("\n");
+      
+      if(data >= 300)
+      {
+        //level 0
+        targetLevel = 0;
+      }
+      else if(data >= 40)
+      {
+        //level 1
+        targetLevel = 1;
+      }
+      else if(data >= 25)
+      {
+        //level 2
+        targetLevel = 2;
+      }
+      else
+      {
+        //level 3
+        targetLevel = 3;
+      }
+      
+      //update light sensor timer
+      lastLSensorCheck = millis();
+    }
   }
 }
