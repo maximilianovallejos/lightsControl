@@ -1,4 +1,17 @@
 
+//+ to "button" level
+//BUTTON_PIN to "button"
+//"resistor" to BUTTON_PIN
+//"resistor" to -
+
+//- to "resistor"
+// "resistor" to light
+//LIGHT_PIN to light
+
+//"lightSensor" to +
+//"lightSensor" to -
+//"lightSensor" to LIGHT_SENSOR_PIN
+
 
 const bool BT_ENABLED = false; //bluetooth
 const bool LS_ENABLED = false; //light sensor
