@@ -48,6 +48,10 @@ int lightsPin[4] = {LIGHT_PIN_W,
                   LIGHT_PIN_R,
                   LIGHT_PIN_G,
                   LIGHT_PIN_B};
+const int WHITE = 0;
+const int RED = 1;
+const int GREEN = 2;
+const int BLUE = 3;
 
 void setup() 
 {
@@ -62,6 +66,10 @@ void setup()
   pinMode(LS_LED_PIN, OUTPUT);
 
   Serial.begin(9600);
+  if(BT_ENABLED)
+  {
+    Serial1.begin(9600);
+  }
 
   testLights();
 
@@ -101,7 +109,7 @@ void loop()
   readAutomaticButton();
 
   //read mode from bluetooh
-  //readBluetooth();
+  readBluetooth();
 
   levelChanged = currentLevel != targetLevel;
   colorChanged = currentColor != targetColor;
@@ -191,9 +199,41 @@ void readAutomaticButton()
 
 void readBluetooth()
 {
-  if(!BT_ENABLED)
+  if(BT_ENABLED && Serial1.available() > 0)
   {
-    return;
+    char data = Serial1.read();
+    switch(data)
+    {
+      case '0':
+        targetLevel = 0;
+        break;
+      case '1':
+        targetLevel = 1;
+        break;
+      case '2':
+        targetLevel = 2;
+        break;
+      case '3':
+        targetLevel = 3;
+        break;
+      case 'a':
+        automaticLevel = !automaticLevel;
+        break;
+      case 'w':
+        targetColor = WHITE;
+        break;
+      case 'r':
+        targetColor = RED;
+        break;
+      case 'g':
+        targetColor = GREEN;
+        break;
+      case 'b':
+        targetColor = BLUE;
+        break;
+      default:
+        break;
+    }
   }
 }
 
