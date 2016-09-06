@@ -14,12 +14,14 @@
 
 
 const bool BT_ENABLED = false; //bluetooth
-const bool LS_ENABLED = false; //light sensor
+const bool LS_ENABLED = true; //light sensor
 const bool COM_ENABLED = true;
 
 const int LIGHT_SENSOR_PIN = A7;
-const int LIGHT_PIN = 6;
-const int BUTTON_PIN =  31;
+const int LIGHT_PIN = 2;//PWM pin
+const int BUTTON_PIN =  52;
+const int AUTO_BUTTON_PIN = 50;
+const int LS_LED_PIN = 53;
 
 //lightSensor
 unsigned long lastLSensorCheck = 0;
@@ -27,7 +29,7 @@ const int lightSensorCheckTime = 2000;
 
 //button
 unsigned long buttonLastPressed = 0;
-const int BUTTON_MIN_TIME = 300;
+const int BUTTON_MIN_TIME = 150;
 
 
 bool levelChanged;
@@ -44,6 +46,8 @@ void setup()
 {
   pinMode(LIGHT_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
+  pinMode(AUTO_BUTTON_PIN, INPUT);
+  pinMode(LS_LED_PIN, OUTPUT);
 
   Serial.begin(9600);
   testLights();
@@ -53,14 +57,18 @@ void setup()
 
 void testLights()
 {
-  analogWrite(LIGHT_PIN, 0);  
+  analogWrite(LIGHT_PIN, 255);  
+  digitalWrite(LS_LED_PIN, HIGH);
   delay(500);
-  analogWrite(LIGHT_PIN, 255);
+  
+  analogWrite(LIGHT_PIN, 0);
+   digitalWrite(LS_LED_PIN, LOW);
   delay(500);
 }
 
 void loop() 
 {
+  digitalWrite(LS_LED_PIN, automaticLevel);
   //read level from button
   readLevelButton();
 
@@ -68,7 +76,7 @@ void loop()
   readAutomaticButton();
 
   //read mode from bluetooh
-  readBluetooth();
+  //readBluetooth();
 
   //read level from light sensor
   readLightSensor();
@@ -87,20 +95,26 @@ void loop()
 
 void applyLightLevel(int level)
 {
+  int lightValue = 0;
   if(level == 0)
   {
     currentLevel = 0;
+    lightValue = 0;
   }
   else
   {
-    currentLevel = currentLevel * 75 + 30;
+    lightValue = level * 75 + 30;
+    currentLevel = level;
   }
-  analogWrite(LIGHT_PIN, currentLevel);
+  Serial.print(currentLevel);
+
+  analogWrite(LIGHT_PIN, lightValue);
 }
 
 void applyLightcolor(int color)
 {
   currentColor = color;
+  Serial.print("");
 }
 
 void readLevelButton()
@@ -109,6 +123,8 @@ void readLevelButton()
   {
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
+      Serial.print("Level button pressed");
+      setAutomaticEnable(false);
       targetLevel = currentLevel + 1;
       if(targetLevel > MAX_LEVEL)
       {
@@ -121,7 +137,14 @@ void readLevelButton()
 
 void readAutomaticButton()
 {
-  
+  if(digitalRead(AUTO_BUTTON_PIN) == HIGH)
+  {
+    if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
+    {
+      setAutomaticEnable(!automaticLevel);
+    }
+    buttonLastPressed = millis();
+  }
 }
 
 void readBluetooth()
@@ -130,6 +153,11 @@ void readBluetooth()
   {
     return;
   }
+}
+
+void setAutomaticEnable(bool value)
+{
+  automaticLevel = value;
 }
 
 void readLightSensor()
