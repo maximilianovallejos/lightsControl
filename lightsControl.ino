@@ -139,6 +139,7 @@ void readAutomaticButton()
 {
   if(digitalRead(AUTO_BUTTON_PIN) == HIGH)
   {
+    Serial.print("AutoLevel button pressed");
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
       setAutomaticEnable(!automaticLevel);
