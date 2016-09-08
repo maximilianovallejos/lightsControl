@@ -1,81 +1,161 @@
 
+//+ to "button" level
+//BUTTON_PIN to "button"
+//"resistor" to BUTTON_PIN
+//"resistor" to -
 
-const bool BT_ENABLED = false; //bluetooth
-const bool LS_ENABLED = false; //light sensor
-const bool COM_ENABLED = true;
+//- to "resistor"
+// "resistor" to light
+//LIGHT_PIN to light
 
-int lightPin = 6;
+//"lightSensor" to +
+//"lightSensor" to -
+//"lightSensor" to LIGHT_SENSOR_PIN
+
+const bool BT_ENABLED = true; //bluetooth
+const bool LS_ENABLED = true; //light sensor
+
+const int LIGHT_SENSOR_PIN = A7;//analog in
+const int LIGHT_PIN_W = 2;//PWM pin
+const int LIGHT_PIN_R = 3;//PWM pin
+const int LIGHT_PIN_G = 4;//PWM pin
+const int LIGHT_PIN_B = 5;//PWM pin
+const int LS_LED_PIN = 53;//auto enabled indicator
+const int LEVEL_BUTTON_PIN =  52;
+const int COLOR_BUTTON_PIN =  51;
+const int AUTO_BUTTON_PIN = 50;
+
+//lightSensor
+unsigned long lastLSensorCheck = 0;//light sensor timer
+const int lightSensorCheckTime = 2000;
+
+//button
+unsigned long buttonLastPressed = 0;//buttons timer
+const int BUTTON_MIN_TIME = 150;
+
+bool levelChanged;
+bool colorChanged;
+bool automaticLevel;
+
 int currentLevel = 0;
 int currentColor = 0;
 int targetLevel = 0;
 int targetColor = 0;
-int button =  31;
 const int MAX_LEVEL = 3;
-bool automaticLevel = false;
+const int MAX_COLOR = 3;
 
-int buttonLastPressed = 0;
-const int BUTTON_MIN_TIME = 300;
+int lightsPin[4] = {LIGHT_PIN_W,
+                  LIGHT_PIN_R,
+                  LIGHT_PIN_G,
+                  LIGHT_PIN_B};
+const int WHITE = 0;
+const int RED = 1;
+const int GREEN = 2;
+const int BLUE = 3;
 
-void setup() {
+void setup() 
+{
+  for(int i=0; i<= MAX_COLOR; i++)
+  {
+    pinMode(lightsPin[i], OUTPUT);
+  }
 
-  pinMode(lightPin, OUTPUT);
-  pinMode(button, INPUT);
+  pinMode(COLOR_BUTTON_PIN, INPUT);
+  pinMode(LEVEL_BUTTON_PIN, INPUT);
+  pinMode(AUTO_BUTTON_PIN, INPUT);
+  pinMode(LS_LED_PIN, OUTPUT);
 
   Serial.begin(9600);
-  testlights();
+  if(BT_ENABLED)
+  {
+    Serial1.begin(9600);
+  }
+
+  testLights();
+
+  automaticLevel = false;
 }
 
-void testlights()
+void testLights()
 {
-  analogWrite(lightPin, 0);  
-   delay(500);
-  analogWrite(lightPin, 255);
+  for(int i=0; i<=MAX_COLOR; i++)
+  {
+    for(int j=MAX_LEVEL; j<=0; j--)
+    { 
+      updateLigts(j,i);
+      delay(500);
+    }
+  }
+
+  //test autoLevel indicator led
+  digitalWrite(LS_LED_PIN, HIGH);
+  delay(500);
+  digitalWrite(LS_LED_PIN, LOW);
   delay(500);
 }
 
-
 void loop() 
 {
-  readButton();
-  readBluetooth();
+  digitalWrite(LS_LED_PIN, automaticLevel);
+  //read level from button
+  readLevelButton();
+  //read color fromm button
+  readColorButton();
+
+  //read level from light sensor
   readLightSensor();
 
-  bool levelChanged = currentLevel != targetLevel;
-  bool colorChanged = currentColor != targetColor;
-  if(levelChanged)
+  //check active auto level
+  readAutomaticButton();
+
+  //read mode from bluetooh
+  readBluetooth();
+
+  levelChanged = currentLevel != targetLevel;
+  colorChanged = currentColor != targetColor;
+  if(levelChanged || colorChanged)
   {
-    applyLightLevel(targetLevel);
-  }
-  if(colorChanged)
-  {
-    applyLightcolor(targetColor);
+    currentLevel = targetLevel;
+    currentColor = targetColor;
+    updateLigts(currentLevel, currentColor);
   }
 }
 
-void applyLightLevel(int level)
+int getLightValueByLevel(int level)
 {
   if(level == 0)
   {
-    currentLevel = 0;
+    return 0;
   }
   else
   {
-    currentLevel = currentLevel * 75 + 30;
+    return level * 75 + 30;
   }
-  analogWrite(lightPin, currentLevel);
 }
 
-void applyLightcolor(int color)
+void updateLigts(int currentLevel, int currentColor)
 {
-  currentColor = color;
+  for(int i=0; i<=MAX_COLOR; i++)
+  {
+    if(i == currentColor)
+    {
+      analogWrite(lightsPin[i], getLightValueByLevel(currentLevel));
+    }
+    else
+    {
+      analogWrite(lightsPin[i], 0);
+    }
+  }
 }
 
-void readButton()
+void readLevelButton()
 {
-  if(digitalRead(button) == HIGH)
+  if(digitalRead(LEVEL_BUTTON_PIN) == HIGH)
   {
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
+      Serial.print("Level button pressed");
+      setAutomaticEnable(false);
       targetLevel = currentLevel + 1;
       if(targetLevel > MAX_LEVEL)
       {
@@ -86,18 +166,115 @@ void readButton()
   }
 }
 
+void readColorButton()
+{
+  if(digitalRead(COLOR_BUTTON_PIN) == HIGH)
+  {
+    if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
+    {
+      Serial.print("Color button pressed");
+      
+      targetColor = currentColor + 1;
+      if(targetColor > MAX_COLOR)
+      {
+        targetColor = 0;
+      }
+    }
+    buttonLastPressed = millis();
+  }
+}
+
+void readAutomaticButton()
+{
+  if(digitalRead(AUTO_BUTTON_PIN) == HIGH)
+  {
+    Serial.print("AutoLevel button pressed");
+    if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
+    {
+      setAutomaticEnable(!automaticLevel);
+    }
+    buttonLastPressed = millis();
+  }
+}
+
 void readBluetooth()
 {
-  if(!BT_ENABLED)
+  if(BT_ENABLED && Serial1.available() > 0)
   {
-    return;
+    char data = Serial1.read();
+    switch(data)
+    {
+      case '0':
+        targetLevel = 0;
+        break;
+      case '1':
+        targetLevel = 1;
+        break;
+      case '2':
+        targetLevel = 2;
+        break;
+      case '3':
+        targetLevel = 3;
+        break;
+      case 'a':
+        automaticLevel = !automaticLevel;
+        break;
+      case 'w':
+        targetColor = WHITE;
+        break;
+      case 'r':
+        targetColor = RED;
+        break;
+      case 'g':
+        targetColor = GREEN;
+        break;
+      case 'b':
+        targetColor = BLUE;
+        break;
+      default:
+        break;
+    }
   }
+}
+
+void setAutomaticEnable(bool value)
+{
+  automaticLevel = value;
 }
 
 void readLightSensor()
 {
-  if(!LS_ENABLED || !automaticLevel)
+  if(LS_ENABLED && automaticLevel)
   {
-    return;
+    if(millis() -lastLSensorCheck > lightSensorCheckTime)
+    {
+      int data =  analogRead(LIGHT_SENSOR_PIN);
+      //Serial.print("Read from light sensor: " + data + " of 1024");
+      Serial.print("\n");
+      
+      if(data >= 300)
+      {
+        //level 0
+        targetLevel = 0;
+      }
+      else if(data >= 40)
+      {
+        //level 1
+        targetLevel = 1;
+      }
+      else if(data >= 25)
+      {
+        //level 2
+        targetLevel = 2;
+      }
+      else
+      {
+        //level 3
+        targetLevel = 3;
+      }
+      
+      //update light sensor timer
+      lastLSensorCheck = millis();
+    }
   }
 }
