@@ -67,10 +67,7 @@ void setup()
     
 
   Serial.begin(9600);
-  if(BT_ENABLED)
-  {
-    Serial1.begin(9600);
-  }
+  
 
   //testLights();
   
@@ -88,6 +85,23 @@ void setup()
   
 
   automaticLevel = false;
+  
+  
+  
+  if(BT_ENABLED)
+  {
+    //Serial1.begin(9600);
+  }
+  
+     pinMode(32, OUTPUT);        // Al poner en HIGH forzaremos el modo AT
+     pinMode(33, OUTPUT);        // cuando se alimente de aqui
+     digitalWrite(33, HIGH);
+     delay (500) ;              // Espera antes de encender el modulo
+
+     Serial.println("Levantando el modulo HC-05");
+     digitalWrite (32, HIGH);    //Enciende el modulo
+     Serial.println("Esperando comandos AT:");
+     Serial1.begin(9600); 
 }
 
 
@@ -204,19 +218,26 @@ void readBluetooth()
   if(BT_ENABLED && Serial1.available() > 0)
   {
     char data = Serial1.read();
+    Serial.print("Bluetooth read: ");
+    Serial.print(data);
+    Serial.print("\n");
     switch(data)
     {
       case '0':
         targetLevel = 0;
+        setAutomaticEnable(false);
         break;
       case '1':
         targetLevel = 1;
+        setAutomaticEnable(false);
         break;
       case '2':
-        targetLevel = 2;
+        targetLevel = 2;           
+        setAutomaticEnable(false);
         break;
       case '3':
         targetLevel = 3;
+        setAutomaticEnable(false);
         break;
       case 'a':
         automaticLevel = !automaticLevel;
