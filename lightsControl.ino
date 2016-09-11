@@ -17,9 +17,9 @@ const bool LS_ENABLED = true; //light sensor
 
 const int LIGHT_SENSOR_PIN = A7;//analog in
 const int LIGHT_PIN_W = 2;//PWM pin
-const int LIGHT_PIN_R = 3;//PWM pin
-const int LIGHT_PIN_G = 4;//PWM pin
-const int LIGHT_PIN_B = 5;//PWM pin
+const int LIGHT_PIN_R = 5;//PWM pin
+const int LIGHT_PIN_G = 3;//PWM pin
+const int LIGHT_PIN_B = 4;//PWM pin
 const int LS_LED_PIN = 53;//auto enabled indicator
 const int LEVEL_BUTTON_PIN =  52;
 const int COLOR_BUTTON_PIN =  51;
@@ -37,9 +37,9 @@ bool levelChanged;
 bool colorChanged;
 bool automaticLevel;
 
-int currentLevel = 0;
+int currentLevel = 1;
 int currentColor = 0;
-int targetLevel = 0;
+int targetLevel = 1;
 int targetColor = 0;
 const int MAX_LEVEL = 3;
 const int MAX_COLOR = 3;
@@ -64,35 +64,46 @@ void setup()
   pinMode(LEVEL_BUTTON_PIN, INPUT);
   pinMode(AUTO_BUTTON_PIN, INPUT);
   pinMode(LS_LED_PIN, OUTPUT);
+    
 
   Serial.begin(9600);
-  if(BT_ENABLED)
+  
+
+  //testLights();
+  
+  for(int i=0; i<= MAX_COLOR; i++)
   {
-    Serial1.begin(9600);
-  }
-
-  testLights();
-
-  automaticLevel = false;
-}
-
-void testLights()
-{
-  for(int i=0; i<=MAX_COLOR; i++)
-  {
-    for(int j=MAX_LEVEL; j<=0; j--)
-    { 
-      updateLigts(j,i);
-      delay(500);
+    for(int j=0; j<=MAX_LEVEL; j++)
+    {
+      updateLights(j, i);
+      delay(150);
     }
   }
+  updateLights(currentLevel, currentColor);
+  
+  
+  
 
-  //test autoLevel indicator led
-  digitalWrite(LS_LED_PIN, HIGH);
-  delay(500);
-  digitalWrite(LS_LED_PIN, LOW);
-  delay(500);
+  automaticLevel = false;
+  
+  
+  
+  if(BT_ENABLED)
+  {
+    //Serial1.begin(9600);
+  }
+  
+     pinMode(32, OUTPUT);        // Al poner en HIGH forzaremos el modo AT
+     pinMode(33, OUTPUT);        // cuando se alimente de aqui
+     digitalWrite(33, HIGH);
+     delay (500) ;              // Espera antes de encender el modulo
+
+     Serial.println("Levantando el modulo HC-05");
+     digitalWrite (32, HIGH);    //Enciende el modulo
+     Serial.println("Esperando comandos AT:");
+     Serial1.begin(9600); 
 }
+
 
 void loop() 
 {
@@ -117,7 +128,7 @@ void loop()
   {
     currentLevel = targetLevel;
     currentColor = targetColor;
-    updateLigts(currentLevel, currentColor);
+    updateLights(currentLevel, currentColor);
   }
 }
 
@@ -129,22 +140,24 @@ int getLightValueByLevel(int level)
   }
   else
   {
-    return level * 75 + 30;
+    return (level * 75 + 30);
   }
 }
 
-void updateLigts(int currentLevel, int currentColor)
+void updateLights(int currentLevel, int currentColor)
 {
   for(int i=0; i<=MAX_COLOR; i++)
   {
+    int value = 255;
     if(i == currentColor)
     {
-      analogWrite(lightsPin[i], getLightValueByLevel(currentLevel));
+      value = 255 - getLightValueByLevel(currentLevel);
     }
     else
     {
-      analogWrite(lightsPin[i], 0);
+      value = 255;
     }
+    analogWrite(lightsPin[i], value);
   }
 }
 
@@ -155,6 +168,7 @@ void readLevelButton()
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
       Serial.print("Level button pressed");
+      Serial.print("\n");
       setAutomaticEnable(false);
       targetLevel = currentLevel + 1;
       if(targetLevel > MAX_LEVEL)
@@ -173,6 +187,7 @@ void readColorButton()
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
       Serial.print("Color button pressed");
+      Serial.print("\n");
       
       targetColor = currentColor + 1;
       if(targetColor > MAX_COLOR)
@@ -188,9 +203,10 @@ void readAutomaticButton()
 {
   if(digitalRead(AUTO_BUTTON_PIN) == HIGH)
   {
-    Serial.print("AutoLevel button pressed");
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
+      Serial.print("AutoLevel button pressed");
+      Serial.print("\n");
       setAutomaticEnable(!automaticLevel);
     }
     buttonLastPressed = millis();
@@ -202,19 +218,26 @@ void readBluetooth()
   if(BT_ENABLED && Serial1.available() > 0)
   {
     char data = Serial1.read();
+    Serial.print("Bluetooth read: ");
+    Serial.print(data);
+    Serial.print("\n");
     switch(data)
     {
       case '0':
         targetLevel = 0;
+        setAutomaticEnable(false);
         break;
       case '1':
         targetLevel = 1;
+        setAutomaticEnable(false);
         break;
       case '2':
-        targetLevel = 2;
+        targetLevel = 2;           
+        setAutomaticEnable(false);
         break;
       case '3':
         targetLevel = 3;
+        setAutomaticEnable(false);
         break;
       case 'a':
         automaticLevel = !automaticLevel;
@@ -249,10 +272,11 @@ void readLightSensor()
     if(millis() -lastLSensorCheck > lightSensorCheckTime)
     {
       int data =  analogRead(LIGHT_SENSOR_PIN);
-      //Serial.print("Read from light sensor: " + data + " of 1024");
+      Serial.print("Read from light sensor: ");
+      Serial.print(data);
       Serial.print("\n");
       
-      if(data >= 300)
+      if(data >= 500)
       {
         //level 0
         targetLevel = 0;
