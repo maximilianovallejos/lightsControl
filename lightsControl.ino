@@ -27,7 +27,7 @@ const int AUTO_BUTTON_PIN = 50;
 
 //lightSensor
 unsigned long lastLSensorCheck = 0;//light sensor timer
-const int lightSensorCheckTime = 2000;
+const int lightSensorCheckTime = 1000;
 
 //button
 unsigned long buttonLastPressed = 0;//buttons timer
@@ -60,9 +60,9 @@ void setup()
     pinMode(lightsPin[i], OUTPUT);
   }
 
-  pinMode(COLOR_BUTTON_PIN, INPUT);
-  pinMode(LEVEL_BUTTON_PIN, INPUT);
-  pinMode(AUTO_BUTTON_PIN, INPUT);
+  pinMode(COLOR_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(LEVEL_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(AUTO_BUTTON_PIN, INPUT_PULLUP);
   pinMode(LS_LED_PIN, OUTPUT);
     
 
@@ -163,7 +163,7 @@ void updateLights(int currentLevel, int currentColor)
 
 void readLevelButton()
 {
-  if(digitalRead(LEVEL_BUTTON_PIN) == HIGH)
+  if(digitalRead(LEVEL_BUTTON_PIN) == LOW)
   {
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
@@ -182,7 +182,7 @@ void readLevelButton()
 
 void readColorButton()
 {
-  if(digitalRead(COLOR_BUTTON_PIN) == HIGH)
+  if(digitalRead(COLOR_BUTTON_PIN) == LOW)
   {
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
@@ -201,7 +201,7 @@ void readColorButton()
 
 void readAutomaticButton()
 {
-  if(digitalRead(AUTO_BUTTON_PIN) == HIGH)
+  if(digitalRead(AUTO_BUTTON_PIN) == LOW)
   {
     if(millis() - buttonLastPressed >= BUTTON_MIN_TIME)
     {
